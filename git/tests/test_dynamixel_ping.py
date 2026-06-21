@@ -2,64 +2,66 @@
 # -*- coding: utf-8 -*-
 
 """
-Test script to ping Dynamixel motors.
-Ensures USB connection to U2D2 and TTL communication is working safely.
+Test script — ping all Dynamixel motors on the bus.
+Verifies that USB → U2D2 → TTL communication is working and all
+expected motors respond before running the main control loop.
 """
-
-import os
-from dynamixel_sdk import * # Uses Dynamixel SDK library
-
-# --- Configuration ---
-# Protocol version for XL330 is 2.0
-PROTOCOL_VERSION            = 2.0               
-
-# Default baudrate of XL330 is 57600
-BAUDRATE                    = 57600             
 
 import sys
 
-# Change this to your U2D2 COM port (e.g., 'COM3' on Windows, '/dev/ttyUSB0' on Linux)
-if sys.platform.startswith('win'):
-    DEVICENAME          = 'COM3'
-else:
-    DEVICENAME          = '/dev/ttyUSB0'
+from dynamixel_sdk import PortHandler, PacketHandler, COMM_SUCCESS
 
-def ping_motors():
-    # Initialize PortHandler and PacketHandler
-    portHandler = PortHandler(DEVICENAME)
-    packetHandler = PacketHandler(PROTOCOL_VERSION)
+# Import hardware constants from central config so this script stays in sync
+# if the COM port, baud rate, or motor count ever changes.
+sys.path.insert(0, '.')
+from src.robot_config import Config
+
+# Change this to your U2D2 COM port if auto-detection is not available.
+if sys.platform.startswith('win'):
+    DEVICENAME = 'COM3'
+else:
+    DEVICENAME = '/dev/ttyUSB0'
+
+
+def ping_motors() -> None:
+    port_handler   = PortHandler(DEVICENAME)
+    packet_handler = PacketHandler(Config.PROTOCOL_VERSION)
 
     # Open port
-    if portHandler.openPort():
-        print(f"Succeeded to open the port: {DEVICENAME}")
-    else:
-        print(f"Failed to open the port: {DEVICENAME}. Check COM port or permissions.")
-        quit()
+    if not port_handler.openPort():
+        print(f"[FATAL] Failed to open port '{DEVICENAME}'. "
+              "Check USB connection and COM port setting.")
+        return
 
-    # Set port baudrate
-    if portHandler.setBaudRate(BAUDRATE):
-        print(f"Succeeded to change the baudrate to {BAUDRATE}")
-    else:
-        print("Failed to change the baudrate")
-        quit()
+    # Set baud rate
+    if not port_handler.setBaudRate(Config.BAUDRATE):
+        port_handler.closePort()
+        print(f"[FATAL] Failed to set baud rate to {Config.BAUDRATE}.")
+        return
 
-    print("\n--- Pinging Motors (Broadcast) ---")
-    # Ping all IDs (1 to 10)
-    found_motors = []
-    for dxl_id in range(1, 11):
-        dxl_model_number, dxl_comm_result, dxl_error = packetHandler.ping(portHandler, dxl_id)
-        if dxl_comm_result == COMM_SUCCESS:
-            print(f"[SUCCESS] Pinged Motor ID: {dxl_id} | Model Number: {dxl_model_number}")
+    print(f"\n--- Pinging Motors 1–{Config.NUM_JOINTS} ---")
+    found_motors   = []
+    missing_motors = []
+
+    for dxl_id in range(1, Config.NUM_JOINTS + 1):
+        model_number, result, _ = packet_handler.ping(port_handler, dxl_id)
+        if result == COMM_SUCCESS:
+            print(f"[FOUND  ] Motor ID {dxl_id:02d} — Model: {model_number}")
             found_motors.append(dxl_id)
         else:
-            pass # Just silently skip motors that aren't there
+            print(f"[MISSING] Motor ID {dxl_id:02d} did not respond. "
+                  "Check power, cable, and ID assignment.")
+            missing_motors.append(dxl_id)
 
-    if len(found_motors) == 0:
-        print("[WARNING] No motors found. Check power to U2D2 PHB and TTL cables.")
+    port_handler.closePort()
+
+    print(f"\nResult: {len(found_motors)}/{Config.NUM_JOINTS} motors found.")
+    if missing_motors:
+        print(f"Missing motor IDs: {missing_motors}")
+        print("Tip: Use Dynamixel Wizard 2.0 to scan and reassign motor IDs.")
     else:
-        print(f"Found {len(found_motors)} motors ready for operation.")
+        print("All motors present — ready to run main.py.")
 
-    portHandler.closePort()
 
 if __name__ == '__main__':
     ping_motors()

@@ -1,3 +1,20 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║  DEPRECATED — DO NOT RUN ON THE SURGE-SNAKE ROBOT HARDWARE             ║
+# ║                                                                          ║
+# ║  This script was written for an early prototype that used an SG90 hobby ║
+# ║  servo driven by Raspberry Pi GPIO PWM (pin 13).                        ║
+# ║                                                                          ║
+# ║  The current robot uses ROBOTIS Dynamixel XL330-M288-T motors which    ║
+# ║  communicate over TTL serial via the U2D2 USB adapter — NOT GPIO PWM.  ║
+# ║  Running this script on the real hardware will have no effect.          ║
+# ║                                                                          ║
+# ║  For single-motor hardware testing use:                                 ║
+# ║      python tests/test_motor_feedback.py                                ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+
 import RPi.GPIO as GPIO
 import time
 

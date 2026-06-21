@@ -1,57 +1,79 @@
 import math
-import time
+from .robot_config import Config
+
 
 class SnakeKinematics:
-    def __init__(self, num_motors=10, center_pos=2048):
+    """
+    Sinusoidal lateral undulation gait for a 10-motor serial-chain snake robot.
+
+    Odd-numbered motors (1, 3, 5 …) are **yaw** (lateral) joints that receive
+    the travelling sine wave.  Even-numbered motors (2, 4, 6 …) are **pitch**
+    joints held flat against the ground.
+    """
+
+    def __init__(
+        self,
+        num_motors: int = Config.NUM_JOINTS,
+        center_pos: int = Config.ENCODER_CENTER,
+    ):
         """
-        Initialize the Snake Kinematics engine.
-        :param num_motors: Total number of Dynamixel motors in the snake.
-        :param center_pos: The encoder value that represents 0 degrees (straight).
-                           For XL330, the range is 0-4095, so 2048 is center.
+        Args:
+            num_motors: Total number of Dynamixel motors in the snake (default: 10).
+            center_pos: Encoder count for 0° (straight). XL330 range is 0–4095, center = 2048.
         """
         self.num_motors = num_motors
         self.center_pos = center_pos
-        
-        # Locomotion parameters (can be tuned for different gaits)
-        self.amplitude = 400       # How wide the wave is (in encoder ticks)
-        self.frequency = 3.0       # How fast the wave propagates
-        self.phase_shift = 1.2     # Phase difference between adjacent segments
-        self.turn_offset = 300     # Encoder ticks to bend the spine during a turn
 
-    def calculate_positions(self, current_time, mode="SLITHER"):
+        # Locomotion parameters — tune these for different gaits
+        self.amplitude   = 400   # Peak deflection from centre (encoder ticks)
+        self.frequency   = 3.0   # Wave propagation speed
+        self.phase_shift = 1.2   # Phase offset between adjacent segments (radians)
+        self.turn_offset = 300   # Encoder ticks added to yaw joints to curve the spine
+
+    def calculate_positions(
+        self,
+        current_time: float,
+        mode: str = "SLITHER",
+        turn_direction: int = 1,
+    ) -> dict:
         """
-        Calculates the target position for each motor at a given time `t` 
-        to produce a 2D lateral undulation (slithering) gait relying on friction anisotropy.
-        
-        mode: "SLITHER", "SLITHER_REV", "SLITHER_TURN"
-        
-        Returns a dictionary mapping motor index (1 to num_motors) to goal position.
+        Calculate target encoder positions for all motors at ``current_time``.
+
+        Uses 2D lateral undulation relying on friction anisotropy of the body
+        segments against the floor.
+
+        Args:
+            current_time:   Elapsed run time in seconds.
+            mode:           One of ``"SLITHER"``, ``"SLITHER_REV"``, ``"SLITHER_TURN"``.
+            turn_direction: +1 = bend right, -1 = bend left.  Only used in
+                            ``SLITHER_TURN`` mode.  Provided by
+                            :class:`ObstacleAvoidance` so the robot turns away
+                            from whichever side the obstacle was detected on.
+
+        Returns:
+            Dict mapping motor index (1 … num_motors) to goal encoder position.
         """
-        positions = {}
-        
-        # Determine wave direction and turning bend based on the mode
         wave_dir = 1
-        bend = 0
-        
+        bend     = 0
+
         if mode == "SLITHER_REV":
-            wave_dir = -1  # Invert time to slither backward
+            wave_dir = -1   # Invert time component to slither backward
         elif mode == "SLITHER_TURN":
-            wave_dir = 1   # Keep slithering forward, but add a bend to curve around the obstacle
-            bend = self.turn_offset 
-            
+            wave_dir = 1    # Keep slithering forward but bias the spine
+            bend     = turn_direction * self.turn_offset
+
+        positions = {}
         for i in range(1, self.num_motors + 1):
-            is_yaw = (i % 2 != 0)
-            
+            is_yaw = (i % 2 != 0)   # Odd motors are yaw (lateral) joints
+
             if is_yaw:
-                # Yaw joints get the lateral undulation sine wave
                 wave_phase = (wave_dir * self.frequency * current_time) - (i * self.phase_shift)
-                wave = self.amplitude * math.sin(wave_phase) + bend
-                pos = int(self.center_pos + wave)
+                pos = int(self.center_pos + self.amplitude * math.sin(wave_phase) + bend)
             else:
-                # Pitch joints stay flat against the ground
+                # Pitch joints remain flat
                 pos = self.center_pos
-                
-            # Clamp values to valid XL330 limits (0 - 4095)
-            positions[i] = max(0, min(4095, pos))
-            
+
+            # Clamp to valid XL330 encoder range
+            positions[i] = max(Config.ENCODER_MIN, min(Config.ENCODER_MAX, pos))
+
         return positions
