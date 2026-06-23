@@ -1,69 +1,139 @@
-/*
- * SURGE-SNAKE Head-Mounted Obstacle Sensor Simulation
- * Designed for ESP32 and HC-SR04 Ultrasonic Sensor on Wokwi.
- * Communicates distance data to Raspberry Pi over Bluetooth Serial.
- */
+#include <ESP32Servo.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <Adafruit_MPU6050.h>
+#include <Adafruit_Sensor.h>
 
-#include "BluetoothSerial.h"
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
 
-#if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
-#error Bluetooth is not enabled! Please run `make menuconfig` to enable it
-#endif
+#define TRIG_PIN 5
+#define ECHO_PIN 18
 
-BluetoothSerial SerialBT;
+Servo servo1;
+Servo servo2;
+Servo servo3;
+Servo servo4;
+Servo servo5;
 
-// GPIO connections on ESP32
-const int TRIG_PIN = 5;
-const int ECHO_PIN = 18;
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+Adafruit_MPU6050 mpu;
+
+float phase = 0;
 
 void setup() {
-  // Initialize standard hardware Serial for monitoring
+
   Serial.begin(115200);
-  Serial.println("[SYSTEM] Initializing SURGE-SNAKE ESP32 Node...");
 
-  // Initialize Bluetooth Serial
-  SerialBT.begin("SURGE-SNAKE-ESP32"); 
-  Serial.println("[SYSTEM] Bluetooth Serial device started as 'SURGE-SNAKE-ESP32'");
+  servo1.attach(26);
+  servo2.attach(27);
+  servo3.attach(14);
+  servo4.attach(12);
+  servo5.attach(13);
 
-  // Initialize Ultrasonic Sensor Pin Modes
   pinMode(TRIG_PIN, OUTPUT);
   pinMode(ECHO_PIN, INPUT);
-  
-  Serial.println("[SYSTEM] Hardware setup complete. Starting measurement loop...");
+
+  Wire.begin(21, 22);
+
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    Serial.println("OLED Failed");
+    while (1);
+  }
+
+  if (!mpu.begin()) {
+    Serial.println("MPU6050 Failed");
+    while (1);
+  }
+
+  display.clearDisplay();
+  display.setTextColor(SSD1306_WHITE);
+
+  Serial.println("SURGE090 Ready");
+}
+
+float getDistance() {
+
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+
+  digitalWrite(TRIG_PIN, LOW);
+
+  long duration = pulseIn(ECHO_PIN, HIGH);
+
+  return duration * 0.034 / 2.0;
+}
+
+void moveSnake() {
+
+  servo1.write(90 + 40 * sin(phase));
+  servo2.write(90 + 40 * sin(phase + 0.8));
+  servo3.write(90 + 40 * sin(phase + 1.6));
+  servo4.write(90 + 40 * sin(phase + 2.4));
+  servo5.write(90 + 40 * sin(phase + 3.2));
+
+  phase += 0.12;
+}
+
+void stopSnake() {
+
+  servo1.write(90);
+  servo2.write(90);
+  servo3.write(90);
+  servo4.write(90);
+  servo5.write(90);
 }
 
 void loop() {
-  // 1. Send trigger pulse
-  digitalWrite(TRIG_PIN, LOW);
-  delayMicroseconds(2);
-  digitalWrite(TRIG_PIN, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(TRIG_PIN, LOW);
-  
-  // 2. Read pulse echo duration (microseconds)
-  long duration = pulseIn(ECHO_PIN, HIGH, 30000); // 30ms timeout
-  
-  // 3. Calculate distance in cm (Speed of sound = 340 m/s = 0.034 cm/us)
-  float distanceCm = duration * 0.034 / 2.0;
-  
-  // 4. Handle out of range readings
-  if (duration == 0 || distanceCm > 400.0) {
-    distanceCm = -1.0; // Out of range or no echo
+
+  float distance = getDistance();
+
+  sensors_event_t a, g, temp;
+  mpu.getEvent(&a, &g, &temp);
+
+  if (distance > 20) {
+    moveSnake();
+  } else {
+    stopSnake();
   }
 
-  // 5. Output to serial monitor
-  Serial.print("Sensor Distance: ");
-  if (distanceCm < 0) {
-    Serial.println("OUT_OF_RANGE");
+  display.clearDisplay();
+
+  display.setTextSize(1);
+
+  display.setCursor(0, 0);
+  display.println("SURGE090");
+
+  display.setCursor(0, 10);
+  display.print("Dist:");
+  display.print(distance, 1);
+  display.println("cm");
+
+  display.setCursor(0, 20);
+  display.print("Ax:");
+  display.print(a.acceleration.x, 1);
+
+  display.setCursor(0, 30);
+  display.print("Ay:");
+  display.print(a.acceleration.y, 1);
+
+  display.setCursor(0, 40);
+  display.print("Az:");
+  display.print(a.acceleration.z, 1);
+
+  display.setCursor(0, 52);
+
+  if (distance > 20) {
+    display.print("STATUS: RUN");
   } else {
-    Serial.print(distanceCm, 1);
-    Serial.println(" cm");
+    display.print("OBSTACLE!");
   }
-  
-  // 6. Transmit to Raspberry Pi over Bluetooth Serial (formatted packet)
-  SerialBT.print("DIST:");
-  SerialBT.println(distanceCm, 1);
-  
-  // Send data at 10 Hz (every 100 ms) to avoid saturating the link
-  delay(100); 
+
+  display.display();
+
+  delay(30);
 }
