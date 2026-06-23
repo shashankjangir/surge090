@@ -111,38 +111,31 @@
         │   ├── test_dynamixel_ping.py       # Ping all motors; report missing IDs
         │   └── test_motor_feedback.py       # Live position / velocity / current readout
         │
-        ├── docs/                            # All project documentation
-        │   ├── reports/
-        │   │   ├── hardware_bom.md          # Bill of Materials (budget: ₹1,00,000)
-        │   │   ├── starter_kit_manual.md    # First-time single-motor setup guide
-        │   │   └── README_v1.md             # Archived v1 README
-        │   ├── datasheets/
-        │   │   ├── XL,XC-330.pdf            # ROBOTIS XL330 / XC330 datasheet
-        │   │   ├── DYNAMIXEL_XL330_1__52682.png
-        │   │   └── Raspberry-Pi-5-Pinout-.jpg
-        │   ├── presentations/
-        │   │   └── Smart_Snake_Robot_SURGE090_Progress_Review - Repaired.pptx
-        │   ├── Component_flow.png           # System component flow diagram
-        │   ├── SSH_LOGIN_INSTRUCTIONS.md
-        │   ├── wiring_diagram.md
-        │   ├── raspberry_pi_setup_guide.md
-        │   ├── parts_and_safety.md
-        │   └── additional_parts_spreadsheet.md
+        ├── CAD/                             # 3D mechanical models
+        │   ├── Segment_v1.stl               # Main segment body STL
+        │   ├── Segment_v2.stl               # Secondary segment body STL
+        │   └── Assembly.step                # Full robot 3D assembly STEP
         │
-        ├── cad/                             # SolidWorks / STEP / STL design files
-        │   ├── segments/
-        │   │   ├── segment1.SLDPRT / .STEP / _v1.STL
-        │   │   └── segement2.SLDPRT / .STEP / _v1.STL
-        │   ├── assembly/
-        │   │   └── assembly.SLDASM
-        │   └── motor_models/
-        │       ├── XL,XC-330.stp           # Dynamixel motor reference model
-        │       └── XL,XC-330.SLDASM
+        ├── Documentation/                   # Project reports & presentations
+        │   ├── Progress_Report_25_Percent.pdf # Initial project milestone review
+        │   └── Presentation.pptx            # Presentation slides for reviews
         │
-        └── images/
-        ├── hardware/                    # Motor & electronics product photos
-        ├── cad/                         # CAD render screenshots
-        └── testing/                     # Hardware test photos & demo video
+        ├── Simulation/                      # Wokwi simulated sensor node
+        │   └── Wokwi/
+        │       ├── diagram.json
+        │       ├── sketch.ino
+        │       ├── libraries.txt
+        │       └── README.md
+        │
+        ├── Images/                          # CAD model renders and physical photos
+        │   ├── CAD_Model.png
+        │   ├── Printed_Segment_1.jpg
+        │   ├── Printed_Segment_2.jpg
+        │   └── Simulation_Architecture.png
+        │
+        └── Hardware/                        # Actuator details and pricing
+            ├── BOM.xlsx                     # Interactive Excel sheet for budget
+            └── Dynamixel_Selection.md       # Rationale for choosing Dynamixel XL330
         ```
 
         ---
@@ -163,7 +156,7 @@
         | M2 / M2.5 Machine Screws | 1 kit | ₹500 | Mount 3D-printed brackets to motors |
         | **Total** | | **≈ ₹52,500** | Out of ₹1,00,000 budget |
 
-        > Full specifications: [`docs/reports/hardware_bom.md`](docs/reports/hardware_bom.md)
+        > Full specifications: [`Hardware/BOM.xlsx`](Hardware/BOM.xlsx)
 
         ---
 
@@ -225,7 +218,7 @@
         ssh smartsnake@snakerobo.local
         ```
 
-        Full guide: [`docs/SSH_LOGIN_INSTRUCTIONS.md`](docs/SSH_LOGIN_INSTRUCTIONS.md)
+        Full guide: Refer to [`Documentation/Progress_Report_25_Percent.pdf`](Documentation/Progress_Report_25_Percent.pdf)
 
         ---
 
@@ -288,28 +281,23 @@
 
         | File | Location | Description |
         |---|---|---|
-        | `segment1.SLDPRT / .STEP / _v1.STL` | `cad/segments/` | Primary body segment |
-        | `segement2.SLDPRT / .STEP / _v1.STL` | `cad/segments/` | Secondary body segment |
-        | `assembly.SLDASM` | `cad/assembly/` | Full 10-motor robot assembly |
-        | `XL,XC-330.stp` | `cad/motor_models/` | Dynamixel motor reference model |
+        | [`Segment_v1.stl`](CAD/Segment_v1.stl) | `CAD/` | Primary body segment STL model |
+        | [`Segment_v2.stl`](CAD/Segment_v2.stl) | `CAD/` | Secondary body segment STL model |
+        | [`Assembly.step`](CAD/Assembly.step) | `CAD/` | Full 10-motor robot assembly STEP model |
 
         > Print settings: PLA or PETG recommended; 20% infill; 0.2 mm layer height.
 
         ---
 
-        ## Documentation
+        ## Documentation & Hardware Selection
 
         | Document | Path | Description |
         |---|---|---|
-        | Hardware BOM | [`docs/reports/hardware_bom.md`](docs/reports/hardware_bom.md) | Full parts list with pricing |
-        | Starter Kit Manual | [`docs/reports/starter_kit_manual.md`](docs/reports/starter_kit_manual.md) | Single-motor first-time setup |
-        | Wiring Diagram | [`docs/wiring_diagram.md`](docs/wiring_diagram.md) | Power + data flow (Mermaid + text) |
-        | Raspberry Pi Setup | [`docs/raspberry_pi_setup_guide.md`](docs/raspberry_pi_setup_guide.md) | OS configuration guide |
-        | SSH Login | [`docs/SSH_LOGIN_INSTRUCTIONS.md`](docs/SSH_LOGIN_INSTRUCTIONS.md) | Connecting to the Pi from Windows |
-        | Parts & Safety | [`docs/parts_and_safety.md`](docs/parts_and_safety.md) | Handling & safety guidelines |
-        | Additional Parts | [`docs/additional_parts_spreadsheet.md`](docs/additional_parts_spreadsheet.md) | Supplementary components |
-        | Progress Presentation | [`docs/presentations/`](docs/presentations/) | SURGE review slides |
-        | Datasheets | [`docs/datasheets/`](docs/datasheets/) | XL330 datasheet, Pi pinout |
+        | Interactive Hardware BOM | [`Hardware/BOM.xlsx`](Hardware/BOM.xlsx) | Full budget spreadsheet with formula totals |
+        | Dynamixel Selection Guide | [`Hardware/Dynamixel_Selection.md`](Hardware/Dynamixel_Selection.md) | Technical comparison & actuator selection rationale |
+        | Progress Report (25%) | [`Documentation/Progress_Report_25_Percent.pdf`](Documentation/Progress_Report_25_Percent.pdf) | Phase 1 milestone report |
+        | Review Presentation | [`Documentation/Presentation.pptx`](Documentation/Presentation.pptx) | Review slides with system overview |
+        | Sensor Node Simulation | [`Simulation/Wokwi/`](Simulation/Wokwi/) | ESP32 + HC-SR04 simulation in Wokwi |
 
         ---
 

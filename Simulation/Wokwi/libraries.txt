@@ -1,0 +1,4 @@
+# Wokwi Library Manager dependencies
+# BluetoothSerial is a built-in library for ESP32 and does not need to be listed here.
+# If migrating to a VL53L0X Time-of-Flight sensor in the future, include:
+# Adafruit_VL53L0X
